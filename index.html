@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ESDノート</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ESDノート">
+<meta name="theme-color" content="#0f766e">
+<link id="mflink" rel="manifest" href="">
+<style>
+:root{
+  --primary:#0f766e; --primary-lt:#e6f2f1; --bg:#f2f5f7; --card:#ffffff;
+  --text:#1e293b; --sub:#64748b; --line:#e2e8f0; --danger:#dc2626; --warn:#d97706;
+  --radius:14px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:16px;}
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom));}
+header#topbar{position:sticky;top:0;z-index:20;background:var(--primary);color:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;justify-content:space-between;}
+header#topbar h1{margin:0;font-size:18px;font-weight:700;}
+main{max-width:760px;margin:0 auto;padding:12px 12px 24px;}
+nav#tabbar{position:fixed;bottom:0;left:0;right:0;z-index:20;background:#fff;border-top:1px solid var(--line);
+  display:flex;padding-bottom:env(safe-area-inset-bottom);}
+nav#tabbar button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:10px;color:var(--sub);cursor:pointer;}
+nav#tabbar button .ico{display:block;font-size:20px;line-height:1.2;}
+nav#tabbar button.on{color:var(--primary);font-weight:700;}
+.card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.card h3{margin:0 0 8px;font-size:15px;}
+.muted{color:var(--sub);font-size:13px;}
+.small{font-size:12px;}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.spread{justify-content:space-between;}
+button.btn{border:0;border-radius:10px;padding:11px 16px;font-size:15px;font-weight:600;cursor:pointer;
+  background:var(--primary);color:#fff;}
+button.btn.sec{background:var(--primary-lt);color:var(--primary);}
+button.btn.ghost{background:none;color:var(--primary);padding:8px 10px;}
+button.btn.danger{background:#fee2e2;color:var(--danger);}
+button.btn.sm{padding:7px 12px;font-size:13px;}
+button.btn.block{width:100%;}
+.fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:15;width:56px;height:56px;
+  border-radius:50%;background:var(--primary);color:#fff;border:0;font-size:28px;box-shadow:0 4px 12px rgba(15,118,110,.4);cursor:pointer;}
+label.fl{display:block;font-size:13px;font-weight:600;color:var(--sub);margin:14px 0 5px;}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px;background:#fff;color:var(--text);
+  font-family:inherit;appearance:none;-webkit-appearance:none;}
+textarea{min-height:84px;resize:vertical;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:14px;color:var(--text);cursor:pointer;}
+.chip.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;}
+.chip.mini{padding:4px 10px;font-size:12px;}
+.tag{display:inline-block;background:var(--primary-lt);color:var(--primary);border-radius:999px;padding:3px 10px;font-size:12px;margin:2px 4px 2px 0;}
+.tag.warn{background:#fef3c7;color:var(--warn);}
+.badge{display:inline-block;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;}
+.badge.op{background:#dbeafe;color:#1d4ed8;} .badge.tech{background:var(--primary-lt);color:var(--primary);}
+.badge.dup{background:#fef3c7;color:var(--warn);}
+.sheet{position:fixed;inset:0;z-index:40;background:var(--bg);display:none;flex-direction:column;}
+.sheet.open{display:flex;}
+.sheet-head{position:sticky;top:0;background:var(--primary);color:#fff;display:flex;align-items:center;gap:8px;
+  padding:calc(10px + env(safe-area-inset-top)) 12px 10px;}
+.sheet-head h2{margin:0;font-size:17px;flex:1;}
+.sheet-head button{background:none;border:0;color:#fff;font-size:16px;padding:6px 10px;cursor:pointer;font-weight:600;}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px calc(40px + env(safe-area-inset-bottom));max-width:760px;width:100%;margin:0 auto;flex:1;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;}
+.stat{background:var(--card);border-radius:var(--radius);padding:12px 10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.stat .v{font-size:22px;font-weight:800;color:var(--primary);}
+.stat .l{font-size:11px;color:var(--sub);margin-top:2px;}
+.bar-row{display:flex;align-items:center;gap:8px;margin:7px 0;}
+.bar-row .bl{width:88px;font-size:12px;color:var(--sub);text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bar-row .bt{flex:1;background:#eef2f5;border-radius:6px;height:22px;position:relative;}
+.bar-row .bf{background:var(--primary);height:100%;border-radius:6px;min-width:2px;}
+.bar-row .bv{position:absolute;right:6px;top:0;line-height:22px;font-size:12px;font-weight:700;color:var(--text);}
+.case-card{background:var(--card);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer;}
+.case-card .top{display:flex;justify-content:space-between;align-items:baseline;}
+.case-card .loc{font-weight:700;font-size:15px;}
+.case-card .meta{color:var(--sub);font-size:13px;margin-top:3px;}
+.tip-card{background:var(--card);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.tip-card .txt{white-space:pre-wrap;font-size:14px;line-height:1.6;margin:6px 0;}
+.op-card{background:var(--card);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid #1d4ed8;}
+.op-card pre{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.7;margin:6px 0;}
+.fb-item{border-left:3px solid var(--primary);padding:6px 10px;margin:8px 0;background:var(--primary-lt);border-radius:0 8px 8px 0;}
+.seg{display:flex;background:#e8edf1;border-radius:10px;padding:3px;margin-bottom:12px;}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:9px 4px;font-size:14px;color:var(--sub);cursor:pointer;}
+.seg button.on{background:#fff;color:var(--primary);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.1);}
+.prev-item{background:var(--card);border-radius:var(--radius);padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.prev-item.off{opacity:.45;}
+.prev-item textarea{margin-top:8px;min-height:60px;font-size:14px;}
+.dl{display:grid;grid-template-columns:96px 1fr;gap:4px 10px;font-size:14px;margin:8px 0;}
+.dl dt{color:var(--sub);font-size:13px;} .dl dd{margin:0;}
+.empty{text-align:center;color:var(--sub);padding:36px 12px;font-size:14px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+svg.chart{width:100%;height:auto;display:block;}
+.fbrow{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;}
+.filterbar{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 8px;}
+.filterbar select{width:auto;flex-shrink:0;padding:8px 30px 8px 10px;font-size:14px;border-radius:999px;}
+.searchbox{margin-bottom:10px;}
+.linkline{color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+<header id="topbar"><h1 id="viewTitle">ダッシュボード</h1><span id="topCount" class="small"></span></header>
+<main id="app"></main>
+<button class="fab" id="fab" style="display:none">＋</button>
+<nav id="tabbar">
+  <button data-tab="dash" class="on"><span class="ico">📊</span>ダッシュボード</button>
+  <button data-tab="cases"><span class="ico">📋</span>症例</button>
+  <button data-tab="tips"><span class="ico">💡</span>TIPS</button>
+  <button data-tab="import"><span class="ico">📥</span>取り込み</button>
+  <button data-tab="data"><span class="ico">⚙️</span>データ</button>
+</nav>
+<div class="sheet" id="sheet">
+  <div class="sheet-head"><button id="sheetBack">←</button><h2 id="sheetTitle"></h2><button id="sheetAct"></button></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+<script>
+'use strict';
+/* ===== PWA manifest（Blob注入） ===== */
+try{
+  const mf={name:'ESDノート',short_name:'ESDノート',display:'standalone',start_url:'.',
+    background_color:'#f2f5f7',theme_color:'#0f766e',icons:[]};
+  document.getElementById('mflink').href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:'application/json'}));
+}catch(e){}
+
+/* ===== 定数 ===== */
+const LOCATIONS=['盲腸','上行結腸','横行結腸','下行結腸','S状結腸','直腸'];
+const MACROS=['0-Ⅰ','0-Ⅱa','0-Ⅱb','0-Ⅱc','LST'];
+const LST_SUBS=['顆粒型(LST-G)','非顆粒型(LST-NG)'];
+const DEPTHS=['M','SM1','SM2以深','その他/不明'];
+const LYMPHO=['なし','ly+','v+','ly+ v+','不明'];
+const MARGINS=['陰性','陽性','判定不能'];
+const ROLES=['執刀','介助','見学'];
+const COMPS=['なし','穿孔','術中出血','後出血'];
+const DEFAULT_TAGS=['剥離ライン','止血','牽引不良','視野確保','局注','マーキング','デバイス操作','切開デザイン','時間配分','体位・重力'];
+const TIP_CATS=['エッジ処理','フラップ形成','病変別アプローチ','局注','体位','その他'];
+const HISTO_SUGGEST=['低異型度腺腫','高異型度腺腫','tub1','tub2','por','SSL','過形成性ポリープ','NET','その他'];
+const DEVICE_SUGGEST=['DualKnife J','ITknife nano','HookKnife J','FlushKnife BT','SB Knife Jr','Clutch Cutter'];
+
+/* ===== ストア ===== */
+const store={
+  load(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v;}catch(e){return d;}},
+  save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+};
+let cases=store.load('esd_cases',[]);
+let tips=store.load('esd_tips',[]);          // {id,text,category,tags[],caseId,createdAt}
+let operators=store.load('esd_operators',[]);// {id,name,settings,updatedAt}
+let tagset=store.load('esd_tagset',DEFAULT_TAGS.slice());
+const saveAll=()=>{store.save('esd_cases',cases);store.save('esd_tips',tips);store.save('esd_operators',operators);store.save('esd_tagset',tagset);};
+
+/* ===== ユーティリティ ===== */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtD=d=>d?d.replace(/-/g,'/'):'';
+function bigrams(s){s=String(s).replace(/\s+/g,'');const r=[];for(let i=0;i<s.length-1;i++)r.push(s.slice(i,i+2));return r;}
+function similarity(a,b){const A=bigrams(a),B=bigrams(b);if(!A.length||!B.length)return 0;
+  const m=new Map();A.forEach(g=>m.set(g,(m.get(g)||0)+1));let inter=0;
+  B.forEach(g=>{const c=m.get(g)||0;if(c>0){inter++;m.set(g,c-1);}});return 2*inter/(A.length+B.length);}
+
+/* チップUI */
+function chipsHTML(name,options,selected,multi,mini){
+  selected=selected||(multi?[]:'');
+  return `<div class="chips" data-name="${esc(name)}" data-multi="${multi?1:0}">`+
+    options.map(o=>`<button type="button" class="chip${mini?' mini':''}${(multi?selected.includes(o):selected===o)?' on':''}" data-v="${esc(o)}">${esc(o)}</button>`).join('')+`</div>`;
+}
+function chipVal(root,name){
+  const c=root.querySelector(`.chips[data-name="${CSS.escape(name)}"]`);if(!c)return null;
+  const on=[...c.querySelectorAll('.chip.on')].map(b=>b.dataset.v);
+  return c.dataset.multi==='1'?on:(on[0]||'');
+}
+document.addEventListener('click',e=>{
+  const chip=e.target.closest('.chip');if(!chip||!chip.closest('.chips'))return;
+  const box=chip.closest('.chips');
+  if(box.dataset.multi==='1'){chip.classList.toggle('on');}
+  else{const was=chip.classList.contains('on');box.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));if(!was)chip.classList.add('on');}
+  if(box.dataset.name==='macroType'){const l=$('#lstRow');if(l)l.style.display=chipVal(document,'macroType')==='LST'?'':'none';}
+  if(box.dataset.name==='dashLoc'||box.dataset.name==='dashSize')renderTrend();
+});
+
+/* ===== シート（全画面パネル） ===== */
+let sheetOnBack=null;
+function openSheet(title,bodyHTML,actLabel,onAct,onBack){
+  $('#sheetTitle').textContent=title;
+  $('#sheetBody').innerHTML=bodyHTML;
+  const a=$('#sheetAct');a.textContent=actLabel||'';a.onclick=onAct||null;
+  sheetOnBack=onBack||null;
+  $('#sheet').classList.add('open');
+  $('#sheetBody').scrollTop=0;
+}
+function closeSheet(){$('#sheet').classList.remove('open');sheetOnBack=null;}
+$('#sheetBack').onclick=()=>{if(sheetOnBack)sheetOnBack();else closeSheet();};
+
+/* ===== タブ ===== */
+let tab='dash';
+const TITLES={dash:'ダッシュボード',cases:'症例一覧',tips:'TIPS集',import:'生メモ取り込み',data:'データ管理'};
+$$('#tabbar button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();});
+function render(){
+  $$('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  $('#viewTitle').textContent=TITLES[tab];
+  $('#topCount').textContent=tab==='cases'?`${cases.length}件`:(tab==='tips'?`${tips.length}件`:'');
+  const fab=$('#fab');
+  fab.style.display=(tab==='cases'||tab==='tips')?'':'none';
+  fab.onclick=()=>{if(tab==='cases')openCaseForm();else if(tab==='tips'){tipsSub==='dev'?openOperatorForm():openTipForm();}};
+  if(tab==='dash')renderDash();
+  else if(tab==='cases')renderCases();
+  else if(tab==='tips')renderTips();
+  else if(tab==='import')renderImport();
+  else renderData();
+}
+
+/* ===== ダッシュボード ===== */
+let dashTrendLoc='すべて',dashTrendSize='すべて';
+function renderDash(){
+  const my=cases.filter(c=>c.role==='執刀');
+  const avgT=my.length?Math.round(my.reduce((s,c)=>s+(+c.procTime||0),0)/my.filter(c=>+c.procTime>0).length||0):0;
+  const compN=cases.filter(c=>(c.complications||[]).some(x=>x!=='なし'&&x)).length;
+  const avgS=cases.length?Math.round(cases.reduce((s,c)=>s+(+c.size||0),0)/(cases.filter(c=>+c.size>0).length||1)):0;
+  let html=`<div class="stat-grid">
+    <div class="stat"><div class="v">${cases.length}</div><div class="l">総症例</div></div>
+    <div class="stat"><div class="v">${my.length}</div><div class="l">執刀数</div></div>
+    <div class="stat"><div class="v">${avgT||'−'}</div><div class="l">平均執刀時間(分)</div></div>
+    <div class="stat"><div class="v">${avgS||'−'}</div><div class="l">平均サイズ(mm)</div></div>
+    <div class="stat"><div class="v">${compN}</div><div class="l">偶発症</div></div>
+  </div>`;
+  // タグ集計
+  const tagCount={};
+  cases.forEach(c=>(c.selfTags||[]).forEach(t=>tagCount[t]=(tagCount[t]||0)+1));
+  const sorted=Object.entries(tagCount).sort((a,b)=>b[1]-a[1]);
+  html+=`<div class="card"><h3>振り返りタグ集計（弱点の傾向）</h3>`;
+  if(!sorted.length)html+=`<div class="empty">症例に振り返りタグを付けると集計されます</div>`;
+  else{const mx=sorted[0][1];
+    html+=sorted.map(([t,n])=>`<div class="bar-row"><div class="bl">${esc(t)}</div><div class="bt"><div class="bf" style="width:${Math.round(n/mx*100)}%"></div><span class="bv">${n}</span></div></div>`).join('');}
+  html+=`</div>`;
+  // 執刀時間推移
+  html+=`<div class="card"><h3>執刀時間の推移</h3>
+    <div class="muted small" style="margin-bottom:8px">執刀症例のみ・日付順</div>
+    <div class="row" style="margin-bottom:6px"><span class="small muted">部位:</span>${chipsHTML('dashLoc',['すべて',...LOCATIONS],dashTrendLoc,false,true)}</div>
+    <div class="row" style="margin-bottom:6px"><span class="small muted">大きさ:</span>${chipsHTML('dashSize',['すべて','<20mm','20-39mm','≥40mm'],dashTrendSize,false,true)}</div>
+    <div id="trendBox"></div></div>`;
+  // 分布
+  const locCount={};LOCATIONS.forEach(l=>locCount[l]=0);
+  cases.forEach(c=>{if(c.location in locCount)locCount[c.location]++;});
+  const sizeBuckets={'<20mm':0,'20-39mm':0,'≥40mm':0,'未記載':0};
+  cases.forEach(c=>{const s=+c.size;if(!s)sizeBuckets['未記載']++;else if(s<20)sizeBuckets['<20mm']++;else if(s<40)sizeBuckets['20-39mm']++;else sizeBuckets['≥40mm']++;});
+  const mkBars=obj=>{const mx=Math.max(1,...Object.values(obj));
+    return Object.entries(obj).map(([k,n])=>`<div class="bar-row"><div class="bl">${esc(k)}</div><div class="bt"><div class="bf" style="width:${Math.round(n/mx*100)}%"></div><span class="bv">${n}</span></div></div>`).join('');};
+  html+=`<div class="card"><h3>部位別の症例数</h3>${cases.length?mkBars(locCount):'<div class="empty">まだ症例がありません</div>'}</div>`;
+  html+=`<div class="card"><h3>大きさ別の症例数</h3>${cases.length?mkBars(sizeBuckets):'<div class="empty">まだ症例がありません</div>'}</div>`;
+  $('#app').innerHTML=html;
+  renderTrend();
+}
+function renderTrend(){
+  const box=$('#trendBox');if(!box)return;
+  dashTrendLoc=chipVal(document,'dashLoc')||'すべて';
+  dashTrendSize=chipVal(document,'dashSize')||'すべて';
+  let list=cases.filter(c=>c.role==='執刀'&&+c.procTime>0);
+  if(dashTrendLoc!=='すべて')list=list.filter(c=>c.location===dashTrendLoc);
+  if(dashTrendSize!=='すべて')list=list.filter(c=>{const s=+c.size;if(!s)return false;
+    if(dashTrendSize==='<20mm')return s<20;if(dashTrendSize==='20-39mm')return s>=20&&s<40;return s>=40;});
+  list.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(list.length<1){box.innerHTML='<div class="empty">該当する執刀症例がありません</div>';return;}
+  const W=340,H=190,P={l:34,r:10,t:12,b:26};
+  const times=list.map(c=>+c.procTime);
+  const ymax=Math.max(...times)*1.15,n=list.length;
+  const x=i=>P.l+(n===1?(W-P.l-P.r)/2:(W-P.l-P.r)*i/(n-1));
+  const y=v=>H-P.b-(H-P.t-P.b)*v/ymax;
+  let svg=`<svg class="chart" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  const steps=4;
+  for(let i=0;i<=steps;i++){const v=Math.round(ymax/steps*i);
+    svg+=`<line x1="${P.l}" y1="${y(v)}" x2="${W-P.r}" y2="${y(v)}" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="${P.l-5}" y="${y(v)+4}" font-size="9" fill="#64748b" text-anchor="end">${v}</text>`;}
+  if(n>1)svg+=`<polyline fill="none" stroke="#0f766e" stroke-width="2" points="${list.map((c,i)=>x(i)+','+y(+c.procTime)).join(' ')}"/>`;
+  list.forEach((c,i)=>{svg+=`<circle cx="${x(i)}" cy="${y(+c.procTime)}" r="3.5" fill="#0f766e"/>`;});
+  // x軸ラベル（最初・中間・最後）
+  const lab=i=>`<text x="${x(i)}" y="${H-8}" font-size="9" fill="#64748b" text-anchor="middle">${fmtD(list[i].date).slice(2)}</text>`;
+  svg+=lab(0);if(n>2)svg+=lab(Math.floor((n-1)/2));if(n>1)svg+=lab(n-1);
+  svg+=`<text x="${P.l-24}" y="${P.t}" font-size="9" fill="#64748b">分</text></svg>`;
+  svg+=`<div class="muted small" style="text-align:center">症例 ${n} 件（横軸：症例の経過）</div>`;
+  box.innerHTML=svg;
+}
+
+/* ===== 症例一覧 ===== */
+let caseSort='dateDesc',caseFilterLoc='',caseFilterRole='';
+function renderCases(){
+  let html=`<div class="filterbar">
+    <select id="cSort">
+      <option value="dateDesc"${caseSort==='dateDesc'?' selected':''}>日付 新しい順</option>
+      <option value="dateAsc"${caseSort==='dateAsc'?' selected':''}>日付 古い順</option>
+      <option value="sizeDesc"${caseSort==='sizeDesc'?' selected':''}>大きさ 大→小</option>
+      <option value="timeDesc"${caseSort==='timeDesc'?' selected':''}>執刀時間 長→短</option>
+      <option value="timeAsc"${caseSort==='timeAsc'?' selected':''}>執刀時間 短→長</option>
+    </select>
+    <select id="cLoc"><option value="">部位: 全て</option>${LOCATIONS.map(l=>`<option${caseFilterLoc===l?' selected':''}>${l}</option>`).join('')}</select>
+    <select id="cRole"><option value="">役割: 全て</option>${ROLES.map(r=>`<option${caseFilterRole===r?' selected':''}>${r}</option>`).join('')}</select>
+  </div><div id="caseList"></div>`;
+  $('#app').innerHTML=html;
+  $('#cSort').onchange=e=>{caseSort=e.target.value;drawCaseList();};
+  $('#cLoc').onchange=e=>{caseFilterLoc=e.target.value;drawCaseList();};
+  $('#cRole').onchange=e=>{caseFilterRole=e.target.value;drawCaseList();};
+  drawCaseList();
+}
+function drawCaseList(){
+  let list=cases.slice();
+  if(caseFilterLoc)list=list.filter(c=>c.location===caseFilterLoc);
+  if(caseFilterRole)list=list.filter(c=>c.role===caseFilterRole);
+  const cmp={dateDesc:(a,b)=>(b.date||'').localeCompare(a.date||''),dateAsc:(a,b)=>(a.date||'').localeCompare(b.date||''),
+    sizeDesc:(a,b)=>(+b.size||0)-(+a.size||0),timeDesc:(a,b)=>(+b.procTime||0)-(+a.procTime||0),timeAsc:(a,b)=>(+a.procTime||0)-(+b.procTime||0)}[caseSort];
+  list.sort(cmp);
+  const box=$('#caseList');
+  if(!list.length){box.innerHTML='<div class="empty">症例がありません。右下の＋から登録できます。</div>';return;}
+  box.innerHTML=list.map(c=>{
+    const comp=(c.complications||[]).filter(x=>x&&x!=='なし');
+    return `<div class="case-card" data-id="${c.id}">
+      <div class="top"><span class="loc">${esc(c.location||'部位未記載')} ${esc(c.size?c.size+'mm':'')}</span><span class="muted small">${fmtD(c.date)}</span></div>
+      <div class="meta">${esc(c.macroType||'')}${c.lstSub?'・'+esc(c.lstSub):''}　${esc(c.role||'')}${c.procTime?'・'+esc(c.procTime)+'分':''}</div>
+      <div>${(c.selfTags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}${comp.map(x=>`<span class="tag warn">${esc(x)}</span>`).join('')}</div>
+    </div>`;}).join('');
+  box.querySelectorAll('.case-card').forEach(el=>el.onclick=()=>openCaseDetail(el.dataset.id));
+}
+
+/* ===== 症例フォーム ===== */
+function fbRowHTML(fb){fb=fb||{by:'',date:today(),text:''};
+  return `<div class="fbrow">
+    <div class="grid2"><input type="text" class="fb-by" placeholder="フィードバックした人" value="${esc(fb.by)}">
+    <input type="date" class="fb-date" value="${esc(fb.date)}"></div>
+    <textarea class="fb-text" placeholder="内容" style="margin-top:8px">${esc(fb.text)}</textarea>
+    <button type="button" class="btn ghost sm fb-del">この項目を削除</button></div>`;}
+function openCaseForm(editing){
+  const c=editing||{date:today(),complications:['なし'],selfTags:[],feedbacks:[]};
+  const body=`<div class="card">
+    <label class="fl">日付</label><input type="date" id="f-date" value="${esc(c.date||today())}">
+    <div class="grid2"><div><label class="fl">年齢</label><input type="number" id="f-age" inputmode="numeric" placeholder="70" value="${esc(c.age||'')}"></div>
+    <div><label class="fl">性別</label>${chipsHTML('sex',['男','女'],c.sex,false)}</div></div>
+  </div>
+  <div class="card"><h3>病変情報</h3>
+    <label class="fl">部位</label>${chipsHTML('location',LOCATIONS,c.location,false)}
+    <label class="fl">大きさ（mm）</label><input type="number" id="f-size" inputmode="numeric" placeholder="30" value="${esc(c.size||'')}">
+    <label class="fl">肉眼型</label>${chipsHTML('macroType',MACROS,c.macroType,false)}
+    <div id="lstRow" style="display:${c.macroType==='LST'?'':'none'}"><label class="fl">LST亜分類</label>${chipsHTML('lstSub',LST_SUBS,c.lstSub,false)}</div>
+  </div>
+  <div class="card"><h3>病理結果</h3>
+    <label class="fl">組織型</label><input type="text" id="f-histo" list="histoList" placeholder="tub1 など" value="${esc(c.histology||'')}">
+    <datalist id="histoList">${HISTO_SUGGEST.map(h=>`<option value="${esc(h)}">`).join('')}</datalist>
+    <label class="fl">深達度</label>${chipsHTML('depth',DEPTHS,c.depth,false)}
+    <label class="fl">脈管侵襲</label>${chipsHTML('lympho',LYMPHO,c.lympho,false)}
+    <label class="fl">垂直断端</label>${chipsHTML('marginV',MARGINS,c.marginV,false)}
+    <label class="fl">水平断端</label>${chipsHTML('marginH',MARGINS,c.marginH,false)}
+  </div>
+  <div class="card"><h3>手技情報</h3>
+    <label class="fl">執刀時間（分）</label><input type="number" id="f-time" inputmode="numeric" placeholder="60" value="${esc(c.procTime||'')}">
+    <label class="fl">術者の役割</label>${chipsHTML('role',ROLES,c.role,false)}
+    <label class="fl">使用デバイス</label><input type="text" id="f-device" list="devList" placeholder="DualKnife J など" value="${esc(c.devices||'')}">
+    <datalist id="devList">${DEVICE_SUGGEST.map(d=>`<option value="${esc(d)}">`).join('')}</datalist>
+    <label class="fl">偶発症（複数可）</label>${chipsHTML('complications',COMPS,c.complications||['なし'],true)}
+  </div>
+  <div class="card"><h3>自己評価・反省点</h3>
+    <textarea id="f-eval" placeholder="うまくいった点・反省点など">${esc(c.selfEval||'')}</textarea>
+    <label class="fl">振り返りタグ（複数可）</label>${chipsHTML('selfTags',tagset,c.selfTags||[],true)}
+    <div class="row" style="margin-top:8px"><input type="text" id="newTag" placeholder="新しいタグを追加" style="flex:1"><button type="button" class="btn sec sm" id="addTagBtn">追加</button></div>
+  </div>
+  <div class="card"><h3>先輩からのフィードバック</h3>
+    <div id="fbList">${(c.feedbacks||[]).map(fbRowHTML).join('')}</div>
+    <button type="button" class="btn sec sm block" id="addFbBtn" style="margin-top:8px">＋ フィードバックを追加</button>
+  </div>
+  <button class="btn block" id="saveCaseBtn" style="margin-top:4px">保存する</button>`;
+  openSheet(editing?'症例を編集':'症例を登録',body,'',null,()=>{
+    if(confirm('編集を破棄して閉じますか？'))closeSheet();
+  });
+  const sb=$('#sheetBody');
+  $('#addTagBtn').onclick=()=>{
+    const v=$('#newTag').value.trim();if(!v)return;
+    if(!tagset.includes(v)){tagset.push(v);saveAll();}
+    const box=sb.querySelector('.chips[data-name="selfTags"]');
+    if(![...box.querySelectorAll('.chip')].some(b=>b.dataset.v===v)){
+      const b=document.createElement('button');b.type='button';b.className='chip on';b.dataset.v=v;b.textContent=v;box.appendChild(b);
+    }
+    $('#newTag').value='';
+  };
+  const bindFbDel=()=>sb.querySelectorAll('.fb-del').forEach(b=>b.onclick=()=>b.closest('.fbrow').remove());
+  bindFbDel();
+  $('#addFbBtn').onclick=()=>{$('#fbList').insertAdjacentHTML('beforeend',fbRowHTML());bindFbDel();};
+  $('#saveCaseBtn').onclick=()=>{
+    const date=$('#f-date').value;
+    if(!date){alert('日付を入力してください');return;}
+    const feedbacks=[...sb.querySelectorAll('.fbrow')].map(r=>({
+      by:r.querySelector('.fb-by').value.trim(),date:r.querySelector('.fb-date').value,text:r.querySelector('.fb-text').value.trim()
+    })).filter(f=>f.text||f.by);
+    const data={
+      id:editing?editing.id:uid(),date,
+      age:$('#f-age').value,sex:chipVal(sb,'sex'),
+      location:chipVal(sb,'location'),size:$('#f-size').value,
+      macroType:chipVal(sb,'macroType'),lstSub:chipVal(sb,'macroType')==='LST'?chipVal(sb,'lstSub'):'',
+      histology:$('#f-histo').value.trim(),depth:chipVal(sb,'depth'),lympho:chipVal(sb,'lympho'),
+      marginV:chipVal(sb,'marginV'),marginH:chipVal(sb,'marginH'),
+      procTime:$('#f-time').value,role:chipVal(sb,'role'),devices:$('#f-device').value.trim(),
+      complications:chipVal(sb,'complications'),
+      selfEval:$('#f-eval').value.trim(),selfTags:chipVal(sb,'selfTags'),
+      feedbacks,createdAt:editing?editing.createdAt:Date.now()
+    };
+    if(editing){const i=cases.findIndex(x=>x.id===editing.id);if(i>=0)cases[i]=data;}
+    else cases.push(data);
+    saveAll();closeSheet();render();
+  };
+}
+
+/* ===== 症例詳細 ===== */
+function openCaseDetail(id){
+  const c=cases.find(x=>x.id===id);if(!c)return;
+  const linked=tips.filter(t=>t.caseId===id);
+  const dd=(k,v)=>`<dt>${k}</dt><dd>${esc(v||'−')}</dd>`;
+  const comp=(c.complications||[]).filter(x=>x&&x!=='なし');
+  const body=`<div class="card">
+    <div class="row spread"><h3 style="margin:0">${esc(c.location||'部位未記載')} ${esc(c.size?c.size+'mm':'')}</h3><span class="muted">${fmtD(c.date)}</span></div>
+    <dl class="dl">${dd('患者',(c.age?c.age+'歳':'')+(c.sex?' '+c.sex+'性':''))}
+    ${dd('肉眼型',(c.macroType||'')+(c.lstSub?'（'+c.lstSub+'）':''))}
+    ${dd('組織型',c.histology)}${dd('深達度',c.depth)}${dd('脈管侵襲',c.lympho)}
+    ${dd('垂直断端',c.marginV)}${dd('水平断端',c.marginH)}
+    ${dd('執刀時間',c.procTime?c.procTime+'分':'')}${dd('役割',c.role)}${dd('デバイス',c.devices)}
+    ${dd('偶発症',comp.length?comp.join('・'):'なし')}</dl>
+  </div>
+  <div class="card"><h3>自己評価・反省点</h3>
+    <div>${(c.selfTags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')||'<span class="muted small">タグなし</span>'}</div>
+    <p style="white-space:pre-wrap;font-size:14px;line-height:1.7">${esc(c.selfEval)||'<span class="muted">未記入</span>'}</p>
+  </div>
+  <div class="card"><h3>先輩からのフィードバック</h3>
+    ${(c.feedbacks||[]).length?(c.feedbacks||[]).map(f=>`<div class="fb-item"><div class="small muted">${esc(f.by)}　${fmtD(f.date)}</div><div style="white-space:pre-wrap;font-size:14px">${esc(f.text)}</div></div>`).join(''):'<div class="muted small">まだありません</div>'}
+  </div>
+  <div class="card"><h3>この症例のTIPS</h3>
+    ${linked.map(t=>`<div class="fb-item"><div>${esc(t.text)}</div><div class="small muted">${esc(t.category||'')}</div></div>`).join('')||'<div class="muted small">まだありません</div>'}
+    <button class="btn sec sm block" id="addCaseTip" style="margin-top:8px">＋ この症例にTIPSを追加</button>
+  </div>
+  <div class="row" style="margin-top:4px">
+    <button class="btn block" id="editCaseBtn" style="flex:1">編集</button>
+    <button class="btn danger" id="delCaseBtn">削除</button>
+  </div>`;
+  openSheet('症例詳細',body,'',null,closeSheet);
+  $('#editCaseBtn').onclick=()=>openCaseForm(c);
+  $('#delCaseBtn').onclick=()=>{if(confirm('この症例を削除しますか？')){cases=cases.filter(x=>x.id!==id);saveAll();closeSheet();render();}};
+  $('#addCaseTip').onclick=()=>openTipForm(null,id,()=>openCaseDetail(id));
+}
+
+/* ===== TIPS集 ===== */
+let tipsSub='tech',tipQuery='',tipCatFilter='';
+function renderTips(){
+  let html=`<div class="seg">
+    <button data-s="tech" class="${tipsSub==='tech'?'on':''}">手技TIPS</button>
+    <button data-s="dev" class="${tipsSub==='dev'?'on':''}">術者別デバイス設定</button>
+  </div><div id="tipsBox"></div>`;
+  $('#app').innerHTML=html;
+  $$('.seg button').forEach(b=>b.onclick=()=>{tipsSub=b.dataset.s;render();});
+  tipsSub==='tech'?drawTechTips():drawOperators();
+}
+function drawTechTips(){
+  const box=$('#tipsBox');
+  box.innerHTML=`<div class="searchbox"><input type="text" id="tipQ" placeholder="キーワード検索" value="${esc(tipQuery)}"></div>
+    <div class="filterbar" id="catBar">${['すべて',...TIP_CATS].map(c=>`<button class="chip mini${(tipCatFilter||'すべて')===c?' on':''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+    <div id="tipList"></div>`;
+  $('#tipQ').oninput=e=>{tipQuery=e.target.value;drawTipList();};
+  box.querySelectorAll('#catBar .chip').forEach(b=>b.onclick=()=>{tipCatFilter=b.dataset.c==='すべて'?'':b.dataset.c;drawTechTips();});
+  drawTipList();
+}
+function drawTipList(){
+  let list=tips.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  if(tipCatFilter)list=list.filter(t=>t.category===tipCatFilter);
+  const q=tipQuery.trim().toLowerCase();
+  if(q)list=list.filter(t=>(t.text+' '+(t.tags||[]).join(' ')+' '+(t.category||'')).toLowerCase().includes(q));
+  const el=$('#tipList');
+  if(!list.length){el.innerHTML='<div class="empty">TIPSがありません。＋ボタンか「取り込み」タブから追加できます。</div>';return;}
+  el.innerHTML=list.map(t=>{
+    const c=t.caseId?cases.find(x=>x.id===t.caseId):null;
+    return `<div class="tip-card" data-id="${t.id}">
+      <div class="row spread"><span class="badge tech">${esc(t.category||'その他')}</span><span class="muted small">${t.createdAt?new Date(t.createdAt).toLocaleDateString('ja-JP'):''}</span></div>
+      <div class="txt">${esc(t.text)}</div>
+      <div>${(t.tags||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div>
+      ${c?`<div class="linkline case-link" data-cid="${c.id}">🔗 ${fmtD(c.date)} ${esc(c.location)} ${esc(c.size?c.size+'mm':'')}</div>`:''}
+      <div class="row" style="margin-top:6px"><button class="btn ghost sm tip-edit">編集</button><button class="btn ghost sm tip-del" style="color:var(--danger)">削除</button></div>
+    </div>`;}).join('');
+  el.querySelectorAll('.tip-edit').forEach(b=>b.onclick=e=>{const id=e.target.closest('.tip-card').dataset.id;openTipForm(tips.find(t=>t.id===id));});
+  el.querySelectorAll('.tip-del').forEach(b=>b.onclick=e=>{const id=e.target.closest('.tip-card').dataset.id;
+    if(confirm('このTIPSを削除しますか？')){tips=tips.filter(t=>t.id!==id);saveAll();render();}});
+  el.querySelectorAll('.case-link').forEach(b=>b.onclick=()=>openCaseDetail(b.dataset.cid));
+}
+function openTipForm(editing,caseId,onDone){
+  const t=editing||{text:'',category:'その他',tags:[],caseId:caseId||''};
+  const body=`<div class="card">
+    <label class="fl">内容</label><textarea id="t-text" placeholder="TIPSの内容">${esc(t.text)}</textarea>
+    <label class="fl">カテゴリ</label>${chipsHTML('t-cat',TIP_CATS,t.category,false)}
+    <label class="fl">タグ（カンマ区切り）</label><input type="text" id="t-tags" placeholder="牽引, 直腸" value="${esc((t.tags||[]).join(', '))}">
+  </div><button class="btn block" id="saveTipBtn">保存する</button>`;
+  openSheet(editing?'TIPSを編集':'TIPSを追加',body,'',null,()=>{onDone?onDone():closeSheet();});
+  $('#saveTipBtn').onclick=()=>{
+    const text=$('#t-text').value.trim();if(!text){alert('内容を入力してください');return;}
+    const data={id:editing?editing.id:uid(),text,category:chipVal($('#sheetBody'),'t-cat')||'その他',
+      tags:$('#t-tags').value.split(/[,、，]/).map(s=>s.trim()).filter(Boolean),
+      caseId:t.caseId||'',createdAt:editing?editing.createdAt:Date.now()};
+    if(editing){const i=tips.findIndex(x=>x.id===editing.id);if(i>=0)tips[i]=data;}else tips.push(data);
+    saveAll();
+    if(onDone)onDone();else{closeSheet();render();}
+  };
+}
+
+/* ===== 術者別デバイス設定 ===== */
+function drawOperators(){
+  const box=$('#tipsBox');
+  if(!operators.length){box.innerHTML='<div class="empty">術者の設定がまだありません。＋ボタンか「取り込み」タブから追加できます。</div>';return;}
+  box.innerHTML=`<div class="muted small" style="margin-bottom:8px">エンドカット・エフェクト／D・I値／coag設定など、術者ごとの設定メモ</div>`+
+    operators.map(o=>`<div class="op-card" data-id="${o.id}">
+      <div class="row spread"><strong>${esc(o.name)}</strong><span class="muted small">${o.updatedAt?new Date(o.updatedAt).toLocaleDateString('ja-JP'):''}</span></div>
+      <pre>${esc(o.settings)}</pre>
+      <div class="row"><button class="btn ghost sm op-edit">編集</button><button class="btn ghost sm op-del" style="color:var(--danger)">削除</button></div>
+    </div>`).join('');
+  box.querySelectorAll('.op-edit').forEach(b=>b.onclick=e=>{const id=e.target.closest('.op-card').dataset.id;openOperatorForm(operators.find(o=>o.id===id));});
+  box.querySelectorAll('.op-del').forEach(b=>b.onclick=e=>{const id=e.target.closest('.op-card').dataset.id;
+    if(confirm('この術者設定を削除しますか？')){operators=operators.filter(o=>o.id!==id);saveAll();render();}});
+}
+function openOperatorForm(editing){
+  const o=editing||{name:'',settings:''};
+  const body=`<div class="card">
+    <label class="fl">術者名</label><input type="text" id="o-name" placeholder="〇〇先生" value="${esc(o.name)}">
+    <label class="fl">設定内容（1行1項目）</label>
+    <textarea id="o-set" style="min-height:140px" placeholder="エンドカットQ エフェクト2&#10;D3 I2&#10;Swift coag 40W">${esc(o.settings)}</textarea>
+  </div><button class="btn block" id="saveOpBtn">保存する</button>`;
+  openSheet(editing?'術者設定を編集':'術者設定を追加',body,'',null,closeSheet);
+  $('#saveOpBtn').onclick=()=>{
+    const name=$('#o-name').value.trim();if(!name){alert('術者名を入力してください');return;}
+    const data={id:editing?editing.id:uid(),name,settings:$('#o-set').value.trim(),updatedAt:Date.now()};
+    if(editing){const i=operators.findIndex(x=>x.id===editing.id);if(i>=0)operators[i]=data;}else operators.push(data);
+    saveAll();closeSheet();render();
+  };
+}
+
+/* ===== 生メモ自動インポート ===== */
+let previewItems=null;
+const OP_RE=/^(.{1,12}?)(先生|せんせい|Dr\.?|医師|部長|教授|准教授|指導医)/;
+function guessCategory(text){
+  const t=text;
+  if(/エッジ|辺縁|縁の|マーキング/.test(t))return 'エッジ処理';
+  if(/フラップ|潜り込|もぐり|粘膜下に入/.test(t))return 'フラップ形成';
+  if(/局注|ヒアルロン|グリセ|生食|インジェク/.test(t))return '局注';
+  if(/体位|仰臥|側臥|腹臥|重力|体交/.test(t))return '体位';
+  if(/LST|直腸|盲腸|回盲|バウヒン|屈曲|ヒダ|ひだ|襞|瘢痕|虫垂|肛門|歯状線/.test(t))return '病変別アプローチ';
+  return 'その他';
+}
+function parseRawMemo(raw){
+  // 行単位で分割。箇条書き記号・字下げで始まる行と、
+  // 「〜先生の設定」のような見出し行に続く行は直前の項目に継続として付ける。
+  const isBullet=l=>/^\s*[・\-*●○◦‣▶>：:①-⑳]/.test(l)||/^\s{2,}\S/.test(l);
+  const blocks=[];let cur=null,opHeader=false;
+  for(const rawLine of raw.split('\n')){
+    const line=rawLine.replace(/\s+$/,'');
+    if(!line.trim()){cur=null;opHeader=false;continue;}
+    const t=line.trim(),m0=t.match(OP_RE);
+    if(cur&&(isBullet(rawLine)||(opHeader&&!m0))){cur.push(line);continue;}
+    cur=[line];blocks.push(cur);
+    if(m0){
+      const rest=t.slice(m0[0].length).replace(/^[のはが：:、\s]+/,'').replace(/^(設定|セッティング|デバイス設定)$/,'').trim();
+      opHeader=!rest; // 名前だけの見出し行 → 続く行を設定として取り込む
+    }else opHeader=false;
+  }
+  const items=[];
+  for(const block of blocks){
+    const lines=block.map(l=>l.replace(/^[\s・\-*●○◦‣▶>：:]+/,'').trim()).filter(Boolean);
+    if(!lines.length)continue;
+    const m=lines[0].match(OP_RE);
+    if(m){
+      const name=(m[1]+ (m[2].startsWith('Dr')?'':m[2])).trim();
+      let rest=lines[0].slice(m[0].length).replace(/^[のはが：:、\s]+/,'').trim();
+      if(/^(設定|セッティング|デバイス設定)$/.test(rest))rest='';
+      const settings=[rest,...lines.slice(1)].filter(Boolean).join('\n');
+      items.push({type:'op',name,text:settings,include:true});
+    }else{
+      const text=lines.join('\n');
+      items.push({type:'tech',text,category:guessCategory(text),include:true});
+    }
+  }
+  // 重複チェック
+  items.forEach(it=>{
+    if(it.type==='tech'){
+      const dup=tips.find(t=>similarity(t.text,it.text)>=0.6);
+      it.dup=dup?dup.text:null;
+    }else{
+      it.dupOp=operators.some(o=>o.name===it.name);
+    }
+  });
+  return items;
+}
+function renderImport(){
+  $('#app').innerHTML=`<div class="card">
+    <h3>生メモをまとめて取り込む</h3>
+    <p class="muted small" style="margin:4px 0 10px">殴り書きメモを貼り付けると、行・空行区切りで分割し「術者別デバイス設定」と「手技TIPS」に自動分類します。登録前にプレビューで修正できます。</p>
+    <textarea id="rawMemo" style="min-height:180px" placeholder="例：&#10;山田先生の設定&#10;・エンドカットQ エフェクト2 D3 I2&#10;・Swift coag 40W&#10;&#10;エッジの処理は最初に外側から攻める&#10;&#10;LSTは肛門側から剥離を開始すると視野が保てる"></textarea>
+    <button class="btn block" id="parseBtn" style="margin-top:10px">分割・分類プレビュー</button>
+  </div>
+  <div id="previewBox"></div>`;
+  $('#parseBtn').onclick=()=>{
+    const raw=$('#rawMemo').value;
+    if(!raw.trim()){alert('メモを貼り付けてください');return;}
+    previewItems=parseRawMemo(raw);
+    drawPreview();
+  };
+}
+function drawPreview(){
+  const box=$('#previewBox');
+  if(!previewItems||!previewItems.length){box.innerHTML='<div class="empty">項目が検出できませんでした</div>';return;}
+  box.innerHTML=`<div class="card"><h3>プレビュー（${previewItems.length}項目）</h3>
+    <p class="muted small">分類・内容を確認して修正してください。チェックを外すと登録されません。</p></div>`+
+    previewItems.map((it,i)=>`<div class="prev-item${it.include?'':' off'}" data-i="${i}">
+      <div class="row spread">
+        <label class="row" style="gap:6px;font-size:14px"><input type="checkbox" class="p-inc" ${it.include?'checked':''}>登録する</label>
+        <select class="p-type" style="width:auto;padding:6px 28px 6px 10px;font-size:13px">
+          <option value="tech"${it.type==='tech'?' selected':''}>手技TIPS</option>
+          <option value="op"${it.type==='op'?' selected':''}>術者設定</option>
+        </select>
+      </div>
+      ${it.type==='op'
+        ?`<label class="fl">術者名</label><input type="text" class="p-name" value="${esc(it.name||'')}">
+          ${it.dupOp?'<div><span class="badge dup">既存の術者に追記されます</span></div>':''}`
+        :`<label class="fl">カテゴリ</label><select class="p-cat">${TIP_CATS.map(c=>`<option${it.category===c?' selected':''}>${c}</option>`).join('')}</select>
+          ${it.dup?`<div style="margin-top:6px"><span class="badge dup">⚠ 重複の可能性</span><div class="muted small" style="margin-top:3px">既存: ${esc(it.dup.slice(0,60))}${it.dup.length>60?'…':''}</div></div>`:''}`}
+      <textarea class="p-text">${esc(it.text)}</textarea>
+    </div>`).join('')+
+    `<button class="btn block" id="commitBtn">この内容で登録する</button>`;
+  box.querySelectorAll('.prev-item').forEach(el=>{
+    const i=+el.dataset.i,it=previewItems[i];
+    el.querySelector('.p-inc').onchange=e=>{it.include=e.target.checked;el.classList.toggle('off',!it.include);};
+    el.querySelector('.p-type').onchange=e=>{
+      it.type=e.target.value;
+      if(it.type==='op'&&!it.name){const m=it.text.match(OP_RE);it.name=m?m[1]+m[2]:'';}
+      if(it.type==='tech'&&!it.category)it.category=guessCategory(it.text);
+      drawPreview();
+    };
+    el.querySelector('.p-text').oninput=e=>{it.text=e.target.value;};
+    const n=el.querySelector('.p-name');if(n)n.oninput=e=>{it.name=e.target.value;};
+    const c=el.querySelector('.p-cat');if(c)c.onchange=e=>{it.category=e.target.value;};
+  });
+  box.querySelector('#commitBtn').onclick=()=>{
+    let nT=0,nO=0;
+    previewItems.filter(it=>it.include).forEach(it=>{
+      if(it.type==='op'){
+        const name=(it.name||'').trim()||'（術者名未設定）';
+        const ex=operators.find(o=>o.name===name);
+        if(ex){ex.settings=(ex.settings?ex.settings+'\n':'')+it.text;ex.updatedAt=Date.now();}
+        else operators.push({id:uid(),name,settings:it.text,updatedAt:Date.now()});
+        nO++;
+      }else{
+        if(!it.text.trim())return;
+        tips.push({id:uid(),text:it.text.trim(),category:it.category||'その他',tags:[it.category||'その他'],caseId:'',createdAt:Date.now()});
+        nT++;
+      }
+    });
+    saveAll();previewItems=null;
+    alert(`登録しました：手技TIPS ${nT}件 / 術者設定 ${nO}件`);
+    tab='tips';render();
+  };
+}
+
+/* ===== データ管理 ===== */
+function renderData(){
+  $('#app').innerHTML=`<div class="card"><h3>バックアップ（エクスポート）</h3>
+    <p class="muted small">全データをJSONファイルとして保存します。機種変更やバックアップ用。</p>
+    <button class="btn block" id="expBtn">JSONをダウンロード</button></div>
+  <div class="card"><h3>復元（インポート）</h3>
+    <p class="muted small">エクスポートしたJSONを読み込みます。</p>
+    <input type="file" id="impFile" accept=".json,application/json" style="border:1px dashed var(--line);border-radius:10px;padding:12px;width:100%">
+    <div class="row" style="margin-top:10px">
+      <button class="btn sec block" id="impMerge" style="flex:1">追加（マージ）</button>
+      <button class="btn danger block" id="impReplace" style="flex:1">上書き（置換）</button>
+    </div></div>
+  <div class="card"><h3>ホーム画面に追加（PWA）</h3>
+    <p class="muted small">iPhoneのSafariでこのページを開き、共有ボタン →「ホーム画面に追加」でアプリのように使えます。データはこの端末のブラウザ内に保存されます。</p></div>
+  <div class="card"><h3>全データ削除</h3>
+    <button class="btn danger block" id="wipeBtn">すべてのデータを削除</button></div>`;
+  $('#expBtn').onclick=()=>{
+    const data={app:'esd-note',version:1,exportedAt:new Date().toISOString(),cases,tips,operators,tagset};
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+    a.download=`esd-note-backup-${today()}.json`;a.click();
+  };
+  const readImp=cb=>{
+    const f=$('#impFile').files[0];
+    if(!f){alert('JSONファイルを選択してください');return;}
+    const r=new FileReader();
+    r.onload=()=>{try{const d=JSON.parse(r.result);
+      if(!d||(!Array.isArray(d.cases)&&!Array.isArray(d.tips)))throw 0;cb(d);}
+      catch(e){alert('ファイルを読み込めませんでした（形式が不正です）');}};
+    r.readAsText(f);
+  };
+  $('#impReplace').onclick=()=>readImp(d=>{
+    if(!confirm('現在のデータをすべて置き換えます。よろしいですか？'))return;
+    cases=d.cases||[];tips=d.tips||[];operators=d.operators||[];tagset=d.tagset||DEFAULT_TAGS.slice();
+    saveAll();alert('復元しました');render();
+  });
+  $('#impMerge').onclick=()=>readImp(d=>{
+    const ids=new Set(cases.map(c=>c.id));(d.cases||[]).forEach(c=>{if(!ids.has(c.id))cases.push(c);});
+    const tids=new Set(tips.map(t=>t.id));(d.tips||[]).forEach(t=>{if(!tids.has(t.id))tips.push(t);});
+    (d.operators||[]).forEach(o=>{const ex=operators.find(x=>x.name===o.name);
+      if(ex){if(o.settings&&!ex.settings.includes(o.settings))ex.settings+='\n'+o.settings;}else operators.push(o);});
+    (d.tagset||[]).forEach(t=>{if(!tagset.includes(t))tagset.push(t);});
+    saveAll();alert('マージしました');render();
+  });
+  $('#wipeBtn').onclick=()=>{
+    if(!confirm('本当にすべてのデータを削除しますか？'))return;
+    if(!confirm('この操作は取り消せません。実行しますか？'))return;
+    cases=[];tips=[];operators=[];tagset=DEFAULT_TAGS.slice();saveAll();alert('削除しました');render();
+  };
+}
+
+/* ===== 起動 ===== */
+render();
+
+</script>
+</body>
+</html>
