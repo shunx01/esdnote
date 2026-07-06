@@ -128,7 +128,8 @@ try{
 }catch(e){}
 
 /* ===== 定数 ===== */
-const LOCATIONS=['盲腸','上行結腸','横行結腸','下行結腸','S状結腸','直腸'];
+const LOCATIONS=['盲腸','上行結腸','横行結腸','下行結腸','S状結腸','直腸','肛門'];
+const LOC_SUBS={'上行結腸':['Ap','Ad'],'横行結腸':['Tp','Tm','Td'],'下行結腸':['Dp','Dd'],'S状結腸':['Sp','Sm','Sd'],'直腸':['RS','Ra','Rb']};
 const MACROS=['0-Ⅰ','0-Ⅱa','0-Ⅱb','0-Ⅱc','LST'];
 const LST_SUBS=['顆粒型(LST-G)','非顆粒型(LST-NG)'];
 const DEPTHS=['M','SM1','SM2以深','その他/不明'];
@@ -150,7 +151,8 @@ let cases=store.load('esd_cases',[]);
 let tips=store.load('esd_tips',[]);          // {id,text,category,tags[],caseId,createdAt}
 let operators=store.load('esd_operators',[]);// {id,name,settings,updatedAt}
 let tagset=store.load('esd_tagset',DEFAULT_TAGS.slice());
-const saveAll=()=>{store.save('esd_cases',cases);store.save('esd_tips',tips);store.save('esd_operators',operators);store.save('esd_tagset',tagset);};
+let teachers=store.load('esd_teachers',[]); // フィードバックしてくれる先生のリスト
+const saveAll=()=>{store.save('esd_cases',cases);store.save('esd_tips',tips);store.save('esd_operators',operators);store.save('esd_tagset',tagset);store.save('esd_teachers',teachers);};
 
 /* ===== ユーティリティ ===== */
 const $=s=>document.querySelector(s);
@@ -181,6 +183,11 @@ document.addEventListener('click',e=>{
   if(box.dataset.multi==='1'){chip.classList.toggle('on');}
   else{const was=chip.classList.contains('on');box.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));if(!was)chip.classList.add('on');}
   if(box.dataset.name==='macroType'){const l=$('#lstRow');if(l)l.style.display=chipVal(document,'macroType')==='LST'?'':'none';}
+  if(box.dataset.name==='location'){const r=$('#locSubRow');if(r){
+    const subs=LOC_SUBS[chipVal(document,'location')]||[];
+    r.style.display=subs.length?'':'none';
+    r.querySelector('#locSubHost').innerHTML=subs.length?chipsHTML('locationSub',subs,'',false):'';
+  }}
   if(box.dataset.name==='dashLoc'||box.dataset.name==='dashSize')renderTrend();
 });
 
@@ -318,7 +325,7 @@ function drawCaseList(){
   box.innerHTML=list.map(c=>{
     const comp=(c.complications||[]).filter(x=>x&&x!=='なし');
     return `<div class="case-card" data-id="${c.id}">
-      <div class="top"><span class="loc">${esc(c.location||'部位未記載')} ${esc(c.size?c.size+'mm':'')}</span><span class="muted small">${fmtD(c.date)}</span></div>
+      <div class="top"><span class="loc">${esc(c.location||'部位未記載')}${c.locationSub?'('+esc(c.locationSub)+')':''} ${esc(c.size?c.size+'mm':'')}</span><span class="muted small">${fmtD(c.date)}</span></div>
       <div class="meta">${esc(c.macroType||'')}${c.lstSub?'・'+esc(c.lstSub):''}　${esc(c.role||'')}${c.procTime?'・'+esc(c.procTime)+'分':''}</div>
       <div>${(c.selfTags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}${comp.map(x=>`<span class="tag warn">${esc(x)}</span>`).join('')}</div>
     </div>`;}).join('');
@@ -326,14 +333,25 @@ function drawCaseList(){
 }
 
 /* ===== 症例フォーム ===== */
+function teacherNames(extra){
+  const names=[...new Set([...teachers,...operators.map(o=>o.name),
+    ...cases.flatMap(c=>(c.feedbacks||[]).map(f=>f.by))].map(s=>(s||'').trim()).filter(Boolean))];
+  if(extra&&!names.includes(extra))names.push(extra);
+  return names;
+}
 function fbRowHTML(fb){fb=fb||{by:'',date:today(),text:''};
+  const opts=`<option value="">先生を選択</option>`+
+    teacherNames(fb.by).map(n=>`<option value="${esc(n)}"${n===fb.by?' selected':''}>${esc(n)}</option>`).join('')+
+    `<option value="__new">＋ 新しい先生を追加…</option>`;
   return `<div class="fbrow">
-    <div class="grid2"><input type="text" class="fb-by" placeholder="フィードバックした人" value="${esc(fb.by)}">
+    <div class="grid2"><select class="fb-by">${opts}</select>
     <input type="date" class="fb-date" value="${esc(fb.date)}"></div>
     <textarea class="fb-text" placeholder="内容" style="margin-top:8px">${esc(fb.text)}</textarea>
     <button type="button" class="btn ghost sm fb-del">この項目を削除</button></div>`;}
-function openCaseForm(editing){
+function openCaseForm(editing,asNew){
+  // asNew=true のとき editing は「プレフィル用データ」として扱い、新規症例として保存する
   const c=editing||{date:today(),complications:['なし'],selfTags:[],feedbacks:[]};
+  const isEdit=!!editing&&!asNew;
   const body=`<div class="card">
     <label class="fl">日付</label><input type="date" id="f-date" value="${esc(c.date||today())}">
     <div class="grid2"><div><label class="fl">年齢</label><input type="number" id="f-age" inputmode="numeric" placeholder="70" value="${esc(c.age||'')}"></div>
@@ -341,6 +359,7 @@ function openCaseForm(editing){
   </div>
   <div class="card"><h3>病変情報</h3>
     <label class="fl">部位</label>${chipsHTML('location',LOCATIONS,c.location,false)}
+    <div id="locSubRow" style="display:${(LOC_SUBS[c.location]||[]).length?'':'none'}"><label class="fl">詳細部位</label><div id="locSubHost">${chipsHTML('locationSub',LOC_SUBS[c.location]||[],c.locationSub,false)}</div></div>
     <label class="fl">大きさ（mm）</label><input type="number" id="f-size" inputmode="numeric" placeholder="30" value="${esc(c.size||'')}">
     <label class="fl">肉眼型</label>${chipsHTML('macroType',MACROS,c.macroType,false)}
     <div id="lstRow" style="display:${c.macroType==='LST'?'':'none'}"><label class="fl">LST亜分類</label>${chipsHTML('lstSub',LST_SUBS,c.lstSub,false)}</div>
@@ -370,7 +389,7 @@ function openCaseForm(editing){
     <button type="button" class="btn sec sm block" id="addFbBtn" style="margin-top:8px">＋ フィードバックを追加</button>
   </div>
   <button class="btn block" id="saveCaseBtn" style="margin-top:4px">保存する</button>`;
-  openSheet(editing?'症例を編集':'症例を登録',body,'',null,()=>{
+  openSheet(isEdit?'症例を編集':'症例を登録',body,'',null,()=>{
     if(confirm('編集を破棄して閉じますか？'))closeSheet();
   });
   const sb=$('#sheetBody');
@@ -386,25 +405,39 @@ function openCaseForm(editing){
   const bindFbDel=()=>sb.querySelectorAll('.fb-del').forEach(b=>b.onclick=()=>b.closest('.fbrow').remove());
   bindFbDel();
   $('#addFbBtn').onclick=()=>{$('#fbList').insertAdjacentHTML('beforeend',fbRowHTML());bindFbDel();};
+  $('#fbList').addEventListener('change',e=>{
+    if(!e.target.classList.contains('fb-by')||e.target.value!=='__new')return;
+    const n=(prompt('先生の名前を入力してください')||'').trim();
+    if(n){
+      if(!teachers.includes(n)){teachers.push(n);saveAll();}
+      if(![...e.target.options].some(o=>o.value===n)){
+        const opt=document.createElement('option');opt.value=n;opt.textContent=n;
+        e.target.insertBefore(opt,e.target.querySelector('option[value="__new"]'));
+      }
+      e.target.value=n;
+    }else e.target.value='';
+  });
   $('#saveCaseBtn').onclick=()=>{
     const date=$('#f-date').value;
     if(!date){alert('日付を入力してください');return;}
-    const feedbacks=[...sb.querySelectorAll('.fbrow')].map(r=>({
-      by:r.querySelector('.fb-by').value.trim(),date:r.querySelector('.fb-date').value,text:r.querySelector('.fb-text').value.trim()
-    })).filter(f=>f.text||f.by);
+    const feedbacks=[...sb.querySelectorAll('.fbrow')].map(r=>{
+      let by=r.querySelector('.fb-by').value.trim();if(by==='__new')by='';
+      return {by,date:r.querySelector('.fb-date').value,text:r.querySelector('.fb-text').value.trim()};
+    }).filter(f=>f.text||f.by);
+    feedbacks.forEach(f=>{if(f.by&&!teachers.includes(f.by))teachers.push(f.by);});
     const data={
-      id:editing?editing.id:uid(),date,
+      id:isEdit?editing.id:uid(),date,
       age:$('#f-age').value,sex:chipVal(sb,'sex'),
-      location:chipVal(sb,'location'),size:$('#f-size').value,
+      location:chipVal(sb,'location'),locationSub:chipVal(sb,'locationSub')||'',size:$('#f-size').value,
       macroType:chipVal(sb,'macroType'),lstSub:chipVal(sb,'macroType')==='LST'?chipVal(sb,'lstSub'):'',
       histology:$('#f-histo').value.trim(),depth:chipVal(sb,'depth'),lympho:chipVal(sb,'lympho'),
       marginV:chipVal(sb,'marginV'),marginH:chipVal(sb,'marginH'),
       procTime:$('#f-time').value,role:chipVal(sb,'role'),devices:$('#f-device').value.trim(),
       complications:chipVal(sb,'complications'),
       selfEval:$('#f-eval').value.trim(),selfTags:chipVal(sb,'selfTags'),
-      feedbacks,createdAt:editing?editing.createdAt:Date.now()
+      feedbacks,createdAt:isEdit?editing.createdAt:Date.now()
     };
-    if(editing){const i=cases.findIndex(x=>x.id===editing.id);if(i>=0)cases[i]=data;}
+    if(isEdit){const i=cases.findIndex(x=>x.id===editing.id);if(i>=0)cases[i]=data;}
     else cases.push(data);
     saveAll();closeSheet();render();
   };
@@ -417,7 +450,7 @@ function openCaseDetail(id){
   const dd=(k,v)=>`<dt>${k}</dt><dd>${esc(v||'−')}</dd>`;
   const comp=(c.complications||[]).filter(x=>x&&x!=='なし');
   const body=`<div class="card">
-    <div class="row spread"><h3 style="margin:0">${esc(c.location||'部位未記載')} ${esc(c.size?c.size+'mm':'')}</h3><span class="muted">${fmtD(c.date)}</span></div>
+    <div class="row spread"><h3 style="margin:0">${esc(c.location||'部位未記載')}${c.locationSub?'('+esc(c.locationSub)+')':''} ${esc(c.size?c.size+'mm':'')}</h3><span class="muted">${fmtD(c.date)}</span></div>
     <dl class="dl">${dd('患者',(c.age?c.age+'歳':'')+(c.sex?' '+c.sex+'性':''))}
     ${dd('肉眼型',(c.macroType||'')+(c.lstSub?'（'+c.lstSub+'）':''))}
     ${dd('組織型',c.histology)}${dd('深達度',c.depth)}${dd('脈管侵襲',c.lympho)}
@@ -591,6 +624,55 @@ function parseRawMemo(raw){
   });
   return items;
 }
+/* ===== 内視鏡レポート取り込み（写真OCR/テキスト） ===== */
+const SUB2MAIN={Ap:'上行結腸',Ad:'上行結腸',Tp:'横行結腸',Tm:'横行結腸',Td:'横行結腸',
+  Dp:'下行結腸',Dd:'下行結腸',Sp:'S状結腸',Sm:'S状結腸',Sd:'S状結腸',RS:'直腸',Ra:'直腸',Rb:'直腸'};
+function parseReport(txt){
+  const c={date:today()};let m;
+  if(m=txt.match(/(20\d{2})[年.\/\-]\s*(\d{1,2})[月.\/\-]\s*(\d{1,2})/))
+    c.date=`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  if(m=txt.match(/(\d{1,3})\s*歳/))c.age=m[1];
+  if(/女/.test(txt))c.sex='女';else if(/男/.test(txt))c.sex='男';
+  if(m=txt.match(/\b(RS|Ra|Rb|Ap|Ad|Tp|Tm|Td|Dp|Dd|Sp|Sm|Sd)\b/)){c.location=SUB2MAIN[m[1]];c.locationSub=m[1];}
+  else{const loc=LOCATIONS.find(l=>txt.includes(l));if(loc)c.location=loc;}
+  if(m=txt.match(/(\d{1,3})\s*[x×＊*]\s*\d{1,3}\s*mm/i))c.size=m[1];
+  else if(m=txt.match(/(\d{1,3})\s*mm/i))c.size=m[1];
+  const t=txt.replace(/[ＩⅠ]/g,'I').replace(/Ⅱ/g,'II');
+  if(/LST/i.test(txt)){c.macroType='LST';
+    if(/非顆粒|NG/i.test(txt))c.lstSub='非顆粒型(LST-NG)';
+    else if(/顆粒|LST-?G/i.test(txt))c.lstSub='顆粒型(LST-G)';}
+  else if(m=t.match(/0\s*[-‐−–]?\s*(IIa|IIb|IIc|Is|Ip|I)\b/i)){
+    const map={I:'0-Ⅰ',IS:'0-Ⅰ',IP:'0-Ⅰ',IIA:'0-Ⅱa',IIB:'0-Ⅱb',IIC:'0-Ⅱc'};
+    c.macroType=map[m[1].toUpperCase()]||'';}
+  if(m=txt.match(/tub1|tub2|por|sig|muc|管状腺腫|腺腫|SSL|過形成|adenocarcinoma/i))c.histology=m[0];
+  if(/SM2|pT1b/i.test(txt))c.depth='SM2以深';
+  else if(/SM1|pT1a/i.test(txt))c.depth='SM1';
+  else if(/pTis|粘膜内|M癌/i.test(txt))c.depth='M';
+  const lyP=/ly1|ly\s*\(\+\)|ly＋/i.test(txt),vP=/\bv1|v\s*\(\+\)|v＋/i.test(txt);
+  const ly0=/ly0|ly\s*\(-\)/i.test(txt),v0=/\bv0|v\s*\(-\)/i.test(txt);
+  if(lyP&&vP)c.lympho='ly+ v+';else if(lyP)c.lympho='ly+';else if(vP)c.lympho='v+';else if(ly0&&v0)c.lympho='なし';
+  if(/VMX/i.test(txt))c.marginV='判定不能';else if(/VM0|pVM0|垂直断端[：:\s]*陰性/i.test(txt))c.marginV='陰性';else if(/VM1|垂直断端[：:\s]*陽性/i.test(txt))c.marginV='陽性';
+  if(/HMX/i.test(txt))c.marginH='判定不能';else if(/HM0|pHM0|水平断端[：:\s]*陰性/i.test(txt))c.marginH='陰性';else if(/HM1|水平断端[：:\s]*陽性/i.test(txt))c.marginH='陽性';
+  return c;
+}
+async function runOCR(file){
+  const st=$('#ocrStat');
+  st.textContent='読み取り準備中…（初回は日本語辞書のダウンロードに少し時間がかかります）';
+  try{
+    if(!window.Tesseract)await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      s.onload=res;s.onerror=()=>rej(new Error('script'));document.head.appendChild(s);});
+    const worker=await Tesseract.createWorker('jpn',1,{
+      logger:m=>{if(m.status==='recognizing text')st.textContent='読み取り中… '+Math.round(m.progress*100)+'%';}});
+    const {data}=await worker.recognize(file);
+    await worker.terminate();
+    $('#repText').value=(data.text||'').replace(/[ \t]+/g,' ').trim();
+    st.textContent='読み取り完了。誤認識がないか確認・修正してから「解析」を押してください。';
+  }catch(e){
+    st.textContent='読み取りに失敗しました。通信環境を確認するか、レポート文を直接貼り付けてください。';
+  }
+}
 function renderImport(){
   $('#app').innerHTML=`<div class="card">
     <h3>生メモをまとめて取り込む</h3>
@@ -598,12 +680,29 @@ function renderImport(){
     <textarea id="rawMemo" style="min-height:180px" placeholder="例：&#10;山田先生の設定&#10;・エンドカットQ エフェクト2 D3 I2&#10;・Swift coag 40W&#10;&#10;エッジの処理は最初に外側から攻める&#10;&#10;LSTは肛門側から剥離を開始すると視野が保てる"></textarea>
     <button class="btn block" id="parseBtn" style="margin-top:10px">分割・分類プレビュー</button>
   </div>
-  <div id="previewBox"></div>`;
+  <div id="previewBox"></div>
+  <div class="card">
+    <h3>内視鏡レポートから症例を取り込む</h3>
+    <p class="muted small" style="margin:4px 0 10px">レポートの写真を選ぶと文字を読み取ります（文章の貼り付けでもOK）。部位・大きさ・肉眼型・病理などを自動入力した症例フォームが開きます。</p>
+    <input type="file" id="repPhoto" accept="image/*" style="border:1px dashed var(--line);border-radius:10px;padding:12px;width:100%">
+    <div id="ocrStat" class="muted small" style="margin:6px 0"></div>
+    <textarea id="repText" style="min-height:120px" placeholder="ここにレポート文を貼り付け（写真を選ぶと自動で入ります）"></textarea>
+    <button class="btn block" id="repParseBtn" style="margin-top:10px">解析して症例フォームを開く</button>
+    <p class="muted small" style="margin-bottom:0">※iPhoneでは写真アプリで文字を長押し→コピーして貼り付ける方が高精度なことがあります</p>
+  </div>`;
   $('#parseBtn').onclick=()=>{
     const raw=$('#rawMemo').value;
     if(!raw.trim()){alert('メモを貼り付けてください');return;}
     previewItems=parseRawMemo(raw);
     drawPreview();
+  };
+  $('#repPhoto').onchange=e=>{const f=e.target.files[0];if(f)runOCR(f);};
+  $('#repParseBtn').onclick=()=>{
+    const txt=$('#repText').value.trim();
+    if(!txt){alert('レポート文を入力するか写真を選んでください');return;}
+    const c=parseReport(txt);
+    c.complications=['なし'];c.selfTags=[];c.feedbacks=[];
+    openCaseForm(c,true);
   };
 }
 function drawPreview(){
@@ -678,7 +777,7 @@ function renderData(){
   <div class="card"><h3>全データ削除</h3>
     <button class="btn danger block" id="wipeBtn">すべてのデータを削除</button></div>`;
   $('#expBtn').onclick=()=>{
-    const data={app:'esd-note',version:1,exportedAt:new Date().toISOString(),cases,tips,operators,tagset};
+    const data={app:'esd-note',version:1,exportedAt:new Date().toISOString(),cases,tips,operators,tagset,teachers};
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
     a.download=`esd-note-backup-${today()}.json`;a.click();
@@ -694,7 +793,7 @@ function renderData(){
   };
   $('#impReplace').onclick=()=>readImp(d=>{
     if(!confirm('現在のデータをすべて置き換えます。よろしいですか？'))return;
-    cases=d.cases||[];tips=d.tips||[];operators=d.operators||[];tagset=d.tagset||DEFAULT_TAGS.slice();
+    cases=d.cases||[];tips=d.tips||[];operators=d.operators||[];tagset=d.tagset||DEFAULT_TAGS.slice();teachers=d.teachers||[];
     saveAll();alert('復元しました');render();
   });
   $('#impMerge').onclick=()=>readImp(d=>{
@@ -703,12 +802,13 @@ function renderData(){
     (d.operators||[]).forEach(o=>{const ex=operators.find(x=>x.name===o.name);
       if(ex){if(o.settings&&!ex.settings.includes(o.settings))ex.settings+='\n'+o.settings;}else operators.push(o);});
     (d.tagset||[]).forEach(t=>{if(!tagset.includes(t))tagset.push(t);});
+    (d.teachers||[]).forEach(t=>{if(!teachers.includes(t))teachers.push(t);});
     saveAll();alert('マージしました');render();
   });
   $('#wipeBtn').onclick=()=>{
     if(!confirm('本当にすべてのデータを削除しますか？'))return;
     if(!confirm('この操作は取り消せません。実行しますか？'))return;
-    cases=[];tips=[];operators=[];tagset=DEFAULT_TAGS.slice();saveAll();alert('削除しました');render();
+    cases=[];tips=[];operators=[];tagset=DEFAULT_TAGS.slice();teachers=[];saveAll();alert('削除しました');render();
   };
 }
 
